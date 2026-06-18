@@ -129,7 +129,7 @@ APP_FEE_RECIPIENT=
 | `CIRCLE_BLOCKCHAIN` | Server-side | Circle blockchain identifier. Defaults to `ARC-TESTNET`. |
 | `KIT_KEY` | Server-side, secret | Circle App Kit key used for FX swaps. Being deprecated on the SDK side in favor of a unified `apiKey` field that will accept either a kit key or a plain API key — `KIT_KEY` stays supported until it's removed. |
 | `NEXT_PUBLIC_ARC_CHAIN` | Public | App Kit chain identifier. Defaults to `Arc_Testnet`. |
-| `CIRCLE_WEBHOOK_SECRET` | Server-side, secret | Optional. If set, required as a bearer token on `/api/webhooks/circle`; recommended for any shared or deployed environment. |
+| `CIRCLE_WEBHOOK_SECRET` | Server-side, secret | Optional extra shared secret. If set, required as a bearer token on `/api/webhooks/circle`, in addition to Circle's `X-Circle-Signature` and `X-Circle-Key-Id` headers. |
 | `APP_FEE_BPS` | Server-side | Platform fee in basis points applied to every swap. Defaults to `25` (0.25%). |
 | `APP_FEE_RECIPIENT` | Server-side | Address that receives swap fees. Leave blank, then run `npm run wallet:generate` to provision a wallet and auto-fill this value. |
 
