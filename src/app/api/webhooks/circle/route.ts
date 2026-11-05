@@ -25,6 +25,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const publicKeyCache = new Map<string, string>();
 
+// Circle key IDs are UUIDs. Checking the format keeps a crafted header like
+// "../" from reaching other api.circle.com paths with our API key.
+const KEY_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Circle sends a HEAD request to verify the endpoint is reachable.
 export function HEAD() {
   return new Response(null, { status: 200 });
@@ -63,6 +67,9 @@ export async function POST(request: Request) {
   const keyId = request.headers.get("x-circle-key-id");
   if (!signature || !keyId) {
     return new Response("Missing Circle signature headers", { status: 400 });
+  }
+  if (!KEY_ID_PATTERN.test(keyId)) {
+    return new Response("Invalid Circle key ID", { status: 400 });
   }
 
   const isVerified = await verifyCircleSignature(rawBody, signature, keyId, env.CIRCLE_API_KEY);
