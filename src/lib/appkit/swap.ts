@@ -4,11 +4,7 @@ import { AppKit, SwapChain } from "@circle-fin/app-kit";
 import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 
 import { clientEnv, serverEnv } from "@/lib/config";
-import {
-  isSupportedSwapRoute,
-  unsupportedSwapRouteMessage,
-  type FxToken,
-} from "@/lib/fx";
+import type { FxToken } from "@/lib/fx";
 
 let cachedKit: AppKit | null = null;
 let cachedAdapter: ReturnType<typeof createCircleWalletsAdapter> | null = null;
@@ -58,10 +54,6 @@ export async function estimateSwap({
   tokenOut,
   amountIn,
 }: QuoteInput): Promise<QuoteResult> {
-  if (!isSupportedSwapRoute(tokenIn, tokenOut)) {
-    throw new Error(unsupportedSwapRouteMessage(tokenIn, tokenOut));
-  }
-
   const env = serverEnv();
   const result = await kit().estimateSwap({
     from: { adapter: adapter(), chain: chain(), address: walletAddress },
@@ -97,10 +89,6 @@ export async function executeSwap({
   slippageBps,
   stopLimit,
 }: ExecuteInput): Promise<ExecuteResult> {
-  if (!isSupportedSwapRoute(tokenIn, tokenOut)) {
-    throw new Error(unsupportedSwapRouteMessage(tokenIn, tokenOut));
-  }
-
   const env = serverEnv();
   const baseConfig = {
     kitKey: env.KIT_KEY,

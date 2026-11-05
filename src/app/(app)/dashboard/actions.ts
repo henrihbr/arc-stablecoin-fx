@@ -3,15 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { isUnsupportedRouteError, unsupportedSwapRouteMessage } from "@/lib/appkit/errors";
 import { estimateSwap, executeSwap } from "@/lib/appkit/swap";
 import { getFxBalances } from "@/lib/circle/wallets";
 import { serverEnv } from "@/lib/config";
-import {
-  FX_TOKENS,
-  isSupportedSwapRoute,
-  unsupportedSwapRouteMessage,
-  type FxToken,
-} from "@/lib/fx";
+import { FX_TOKENS, type FxToken } from "@/lib/fx";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,7 +22,7 @@ const quoteSchema = z.object({
 
 export type QuoteState =
   | { ok: true; amountOut: string; effectiveRate: string; appFeeBps: number; appFeeAmount: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; unsupportedRoute?: boolean };
 
 async function getProfile() {
   const supabase = await createClient();
@@ -52,9 +48,6 @@ export async function quoteSwap(input: {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid quote input" };
   }
-  if (!isSupportedSwapRoute(parsed.data.from, parsed.data.to)) {
-    return { ok: false, error: unsupportedSwapRouteMessage(parsed.data.from, parsed.data.to) };
-  }
   try {
     const { profile } = await getProfile();
     const env = serverEnv();
@@ -73,6 +66,13 @@ export async function quoteSwap(input: {
       appFeeAmount,
     };
   } catch (err) {
+    if (isUnsupportedRouteError(err)) {
+      return {
+        ok: false,
+        error: unsupportedSwapRouteMessage(parsed.data.from, parsed.data.to),
+        unsupportedRoute: true,
+      };
+    }
     const message = err instanceof Error ? err.message : "Failed to fetch quote";
     return { ok: false, error: message };
   }
@@ -103,9 +103,6 @@ export async function executeSwapAction(input: {
   if (!parsed.success) {
     console.error("[executeSwapAction] validation failed", parsed.error.issues);
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
-  }
-  if (!isSupportedSwapRoute(parsed.data.from, parsed.data.to)) {
-    return { ok: false, error: unsupportedSwapRouteMessage(parsed.data.from, parsed.data.to) };
   }
 
   let user;
@@ -183,7 +180,11 @@ export async function executeSwapAction(input: {
     revalidatePath("/dashboard");
     return { ok: true, swapId: pending.id };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Swap execution failed";
+    const message = isUnsupportedRouteError(err)
+      ? unsupportedSwapRouteMessage(parsed.data.from, parsed.data.to)
+      : err instanceof Error
+        ? err.message
+        : "Swap execution failed";
     console.error("[executeSwapAction] executeSwap threw", {
       name: err instanceof Error ? err.name : undefined,
       message: err instanceof Error ? err.message : err,

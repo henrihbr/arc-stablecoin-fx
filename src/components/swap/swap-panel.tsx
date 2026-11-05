@@ -30,11 +30,9 @@ import {
   applySlippageFloor,
   bpsToPercent,
   formatAmount,
-  isSupportedSwapRoute,
   isPositiveDecimal,
   otherToken,
   SLIPPAGE_PRESETS_BPS,
-  unsupportedSwapRouteMessage,
   type FxToken,
 } from "@/lib/fx";
 import { createClient } from "@/lib/supabase/client";
@@ -69,8 +67,6 @@ export function SwapPanel({ userId, balances: initialBalances }: { userId: strin
   }
 
   const currentBalance = from === "USDC" ? balances.usdc : balances.eurc;
-  const routeSupported = isSupportedSwapRoute(from, to);
-  const unsupportedRouteError = routeSupported ? null : unsupportedSwapRouteMessage(from, to);
   if (isPositiveDecimal(amountIn) && Number(amountIn) > Number(currentBalance)) {
     setAmountIn(Number(currentBalance) > 0 ? currentBalance : "");
   }
@@ -103,15 +99,7 @@ export function SwapPanel({ userId, balances: initialBalances }: { userId: strin
     const handle = window.setTimeout(async () => {
       if (!isPositiveDecimal(amountIn)) {
         if (id === requestId.current) {
-          setQuote(unsupportedRouteError ? { ok: false, error: unsupportedRouteError } : null);
-          setQuoting(false);
-        }
-        return;
-      }
-      if (unsupportedRouteError) {
-        if (id === requestId.current) {
-          setQuote({ ok: false, error: unsupportedRouteError });
-          setMinOut("");
+          setQuote(null);
           setQuoting(false);
         }
         return;
@@ -126,16 +114,17 @@ export function SwapPanel({ userId, balances: initialBalances }: { userId: strin
       }
     }, 350);
     return () => window.clearTimeout(handle);
-  }, [amountIn, from, to, slippageBps, minOutTouched, unsupportedRouteError]);
+  }, [amountIn, from, to, slippageBps, minOutTouched]);
 
   const insufficient = useMemo(() => {
     if (!isPositiveDecimal(amountIn)) return false;
     return Number(amountIn) > Number(balanceFor(from));
   }, [amountIn, from, balances]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const routeUnavailable = quote?.ok === false && quote.unsupportedRoute === true;
+
   const canExecute =
     quote?.ok &&
-    routeSupported &&
     isPositiveDecimal(amountIn) &&
     !insufficient &&
     !quoting &&
@@ -348,7 +337,7 @@ export function SwapPanel({ userId, balances: initialBalances }: { userId: strin
             disabled={!canExecute}
             onClick={() => setOpen(true)}
           >
-            {!routeSupported
+            {routeUnavailable
               ? "Route unavailable"
               : executing
               ? "Executing…"
