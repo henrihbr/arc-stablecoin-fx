@@ -3,7 +3,7 @@ import "server-only";
 import { AppKit, SwapChain } from "@circle-fin/app-kit";
 import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
 
-import { clientEnv, serverEnv } from "@/lib/config";
+import { appFeeBps, clientEnv, serverEnv } from "@/lib/config";
 import type { FxToken } from "@/lib/fx";
 
 let cachedKit: AppKit | null = null;
@@ -68,7 +68,7 @@ export async function estimateSwap({
   const outNum = Number(amountOut);
   const effectiveRate = inNum > 0 ? (outNum / inNum).toString() : "0";
 
-  return { amountOut, appFeeBps: env.APP_FEE_BPS, effectiveRate };
+  return { amountOut, appFeeBps: appFeeBps(env), effectiveRate };
 }
 
 export type ExecuteInput = QuoteInput & {

@@ -7,7 +7,11 @@ const serverSchema = z.object({
   CIRCLE_WEBHOOK_SECRET: z.string().min(1).optional(),
   KIT_KEY: z.string().min(1),
   APP_FEE_BPS: z.coerce.number().int().min(0).max(10_000).default(25),
-  APP_FEE_RECIPIENT: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "must be a 0x-prefixed EVM address").optional(),
+  // A blank value (as in .env.example) counts as unset.
+  APP_FEE_RECIPIENT: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().regex(/^0x[0-9a-fA-F]{40}$/, "must be a 0x-prefixed EVM address").optional(),
+  ),
   SUPABASE_SECRET_KEY: z.string().min(1),
 });
 
@@ -28,6 +32,11 @@ export function serverEnv() {
   }
   cachedServer = parsed.data;
   return cachedServer;
+}
+
+// The fee is only charged when there's a recipient to send it to.
+export function appFeeBps(env: z.infer<typeof serverSchema>) {
+  return env.APP_FEE_RECIPIENT ? env.APP_FEE_BPS : 0;
 }
 
 export const clientEnv = clientSchema.parse({
