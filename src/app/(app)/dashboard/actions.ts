@@ -23,7 +23,7 @@ import { z } from "zod";
 
 import { estimateSwap, executeSwap } from "@/lib/appkit/swap";
 import { getFxBalances } from "@/lib/circle/wallets";
-import { serverEnv } from "@/lib/config";
+import { appFeeBps, serverEnv } from "@/lib/config";
 import { FX_TOKENS, type FxToken } from "@/lib/fx";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -67,19 +67,18 @@ export async function quoteSwap(input: {
   }
   try {
     const { profile } = await getProfile();
-    const env = serverEnv();
     const result = await estimateSwap({
       walletAddress: profile.wallet_address,
       tokenIn: parsed.data.from,
       tokenOut: parsed.data.to,
       amountIn: parsed.data.amountIn,
     });
-    const appFeeAmount = ((Number(parsed.data.amountIn) * env.APP_FEE_BPS) / 10_000).toFixed(6);
+    const appFeeAmount = ((Number(parsed.data.amountIn) * result.appFeeBps) / 10_000).toFixed(6);
     return {
       ok: true,
       amountOut: result.amountOut,
       effectiveRate: result.effectiveRate,
-      appFeeBps: env.APP_FEE_BPS,
+      appFeeBps: result.appFeeBps,
       appFeeAmount,
     };
   } catch (err) {
@@ -137,7 +136,7 @@ export async function executeSwapAction(input: {
       amount_in: parsed.data.amountIn,
       min_out: parsed.data.minOut ?? null,
       slippage_bps: parsed.data.slippageBps,
-      app_fee_bps: env.APP_FEE_BPS,
+      app_fee_bps: appFeeBps(env),
       status: "pending",
     })
     .select("id")
