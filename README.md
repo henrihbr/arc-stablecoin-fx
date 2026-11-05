@@ -138,5 +138,5 @@ APP_FEE_RECIPIENT=
 This sample application:
 - Assumes testnet usage only, and is not intended for production use without modification
 - Handles secrets (`CIRCLE_ENTITY_SECRET`, `SUPABASE_SECRET_KEY`, `KIT_KEY`) via server-only environment variables, never exposed to the client
-- Leaves webhook auth opt-in — set `CIRCLE_WEBHOOK_SECRET` in any shared or deployed environment, since without it `/api/webhooks/circle` accepts unauthenticated requests from anyone who knows the URL
+- Verifies Circle's `X-Circle-Signature` on every `/api/webhooks/circle` request; `CIRCLE_WEBHOOK_SECRET` adds an optional bearer token on top
 - Provisions the platform fee wallet manually via `npm run wallet:generate`, with no key-rotation flow
